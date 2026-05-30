@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Expense Tracker{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% set emoji_map = {
+  'Food & Dining': '🍔',
+  'Transport': '🚕',
+  'Shopping': '🛍️',
+  'Entertainment': '🎬',
+  'Health': '💊',
+  'Education': '📚',
+  'Utilities': '⚡',
+  'Rent': '🏠',
+  'Other': '✨'
+} %}
+
+{% block content %}
+
+<!-- KPI Cards -->
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-label">Total Expenses (All Time)</div>
+    <div class="kpi-value" id="total-value">₹{{ "%.2f"|format(total) }}</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">
+      {% if category_filter %}Filtered Total ({{ category_filter }}){% else %}Showing Total{% endif %}
+    </div>
+    <div class="kpi-value kpi-value--accent">₹{{ "%.2f"|format(filtered_total) }}</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">This Month</div>
+    <div class="kpi-value">₹{{ "%.2f"|format(current_month_total) }}</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Last Month</div>
+    <div class="kpi-value">₹{{ "%.2f"|format(last_month_total) }}</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Total Records</div>
+    <div class="kpi-value">{{ expenses|length }}</div>
+  </div>
+  <div class="kpi-card" {% if budget > 0 and current_month_total > budget %}style="border-color: var(--color-error);"{% endif %}>
+    <div class="kpi-label">Monthly Budget</div>
+    <div class="kpi-value {% if budget > 0 and current_month_total > budget %}text-error{% endif %}">
+      {% if budget > 0 %}₹{{ "%.2f"|format(budget) }}{% else %}Not Set{% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Category Breakdown & Chart -->
+{% if category_totals %}
+<div class="section-card breakdown-grid">
+  <div class="breakdown-list">
+    <div class="section-card-header">
+      <h2 class="section-heading">Spending by Category</h2>
+    </div>
+    <div class="category-bars">
+      {% set max_total = category_totals[0]['total'] if category_totals[0]['total'] > 0 else 1 %}
+      {% for ct in category_totals %}
+      <div class="category-bar-row">
+        <span class="category-bar-label">{{ emoji_map.get(ct['category'], '✨') }} {{ ct['category'] }}</span>
+        <div class="category-bar-track">
+          <div class="category-bar-fill" style="width: {{ (ct['total'] / max_total * 100)|round(1) }}%"></div>
+        </div>
+        <span class="category-bar-amount">₹{{ "%.2f"|format(ct['total']) }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  <div style="padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-6); justify-content: center; align-items: center;">
+    <div style="width: 100%;">
+      <h3 style="text-align: center; font-size: var(--text-sm); color: var(--color-text-muted); margin-bottom: var(--space-2);">Current View</h3>
+      <div style="position: relative; height: 220px; width: 100%;">
+        <canvas id="expenseChart"></canvas>
+      </div>
+    </div>
+    <div style="width: 100%; border-top: 1px solid var(--color-divider); padding-top: var(--space-4);">
+      <h3 style="text-align: center; font-size: var(--text-sm); color: var(--color-text-muted); margin-bottom: var(--space-2);">Last Month</h3>
+      <div id="lastMonthContainer" style="position: relative; height: 220px; width: 100%;">
+        <canvas id="lastMonthChart"></canvas>
+      </div>
+      <div id="comparisonContainer" style="margin-top: var(--space-4); font-size: var(--text-sm); background: var(--color-surface-2); padding: var(--space-4); border-radius: var(--radius-md); border: 1px solid var(--color-border);"></div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Filter + Table -->
+<div class="section-card">
+  <div class="section-card-header">
+    <h2 class="section-heading">All Expenses</h2>
+    <div class="filter-row" style="justify-content: space-between; width: 100%;">
+      <form method="GET" action="{{ url_for('index') }}" class="filter-form" style="flex-wrap: wrap;">
+        <input type="text" name="q" value="{{ search_query }}" placeholder="Search..." class="form-input" style="width: 140px; padding: 6px 12px; height: 36px;">
+        <input type="date" name="start_date" value="{{ start_date }}" class="form-input" title="Start Date" style="width: 130px; padding: 6px 12px; height: 36px;">
+        <input type="date" name="end_date" value="{{ end_date }}" class="form-input" title="End Date" style="width: 130px; padding: 6px 12px; height: 36px;">
+        
+        <label for="category-select" class="sr-only">Filter by category</label>
+        <select name="category" id="category-select" class="select" style="height: 36px;">
+          <option value="">All Categories</option>
+          {% for cat in categories %}
+            <option value="{{ cat }}" {% if category_filter == cat %}selected{% endif %}>{{ emoji_map.get(cat, '✨') }} {{ cat }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-primary btn-sm" style="height: 36px;">Filter</button>
+        {% if category_filter or search_query or start_date or end_date %}
+          <a href="{{ url_for('index') }}" class="btn btn-ghost btn-sm" style="height: 36px;">
+            <i data-lucide="x" style="width:14px;height:14px;"></i> Clear
+          </a>
+        {% endif %}
+      </form>
+      <div style="display: flex; gap: var(--space-2); margin-top: var(--space-2);">
+        <a href="{{ url_for('export_csv', q=search_query, start_date=start_date, end_date=end_date, category=category_filter) }}" class="btn btn-ghost btn-sm">
+          <i data-lucide="download" style="width:14px;height:14px;"></i> Export CSV
+        </a>
+        <a href="{{ url_for('add_expense') }}" class="btn btn-primary btn-sm">
+          <i data-lucide="plus" style="width:14px;height:14px;"></i> Add Expense
+        </a>
+      </div>
+    </div>
+  </div>
+
+  {% if expenses %}
+  <div class="table-wrapper">
+    <table class="expense-table" aria-label="Expense records">
+      <thead>
+        <tr>
+          <th scope="col">Title</th>
+          <th scope="col">Category</th>
+          <th scope="col">Date</th>
+          <th scope="col" class="text-right">Amount</th>
+          <th scope="col" class="text-center">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for expense in expenses %}
+        <tr>
+          <td class="expense-title">
+            {{ expense['title'] }}
+            {% if expense['note'] %}
+              <span class="expense-note">{{ expense['note'] }}</span>
+            {% endif %}
+          </td>
+          <td><span class="badge badge--{{ expense['category']|lower|replace(' ', '-')|replace('&', '') }}">{{ emoji_map.get(expense['category'], '✨') }} {{ expense['category'] }}</span></td>
+          <td class="text-muted tabular-nums">{{ expense['date'] }}</td>
+          <td class="text-right tabular-nums amount-cell">₹{{ "%.2f"|format(expense['amount']) }}</td>
+          <td class="text-center">
+            <div class="action-btns">
+              <a href="{{ url_for('edit_expense', expense_id=expense['id']) }}" class="btn-icon" aria-label="Edit {{ expense['title'] }}">
+                <i data-lucide="pencil"></i>
+                <span>Edit</span>
+              </a>
+              <form method="POST" action="{{ url_for('delete_expense', expense_id=expense['id']) }}" onsubmit="return confirm('Delete this expense?')">
+                <button type="submit" class="btn-icon btn-icon--danger" aria-label="Delete {{ expense['title'] }}">
+                  <i data-lucide="trash-2"></i>
+                  <span>Delete</span>
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr class="table-total-row">
+          <td colspan="3"><strong>Total</strong></td>
+          <td class="text-right tabular-nums"><strong>₹{{ "%.2f"|format(filtered_total) }}</strong></td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-state-icon"><i data-lucide="receipt"></i></div>
+    <h3>No expenses yet</h3>
+    <p>Start tracking by adding your first expense entry.</p>
+    <a href="{{ url_for('add_expense') }}" class="btn btn-primary">Add First Expense</a>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

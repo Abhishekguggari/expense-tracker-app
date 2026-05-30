@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Login - Expense Tracker{% endblock %}
+{% block page_title %}Sign In{% endblock %}
+
+{% block content %}
+<div class="form-page" style="margin: 0 auto;">
+  <div class="form-card">
+    <form class="expense-form" method="POST" action="{{ url_for('login') }}">
+      <div class="form-group">
+        <label class="form-label" for="username">Username <span class="required">*</span></label>
+        <input class="form-input" type="text" id="username" name="username" placeholder="Enter your username" required autofocus>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label" for="password">Password <span class="required">*</span></label>
+        <input class="form-input" type="password" id="password" name="password" placeholder="••••••••" required>
+      </div>
+      
+      <div class="form-actions" style="justify-content: space-between; align-items: center;">
+        <a href="{{ url_for('register') }}" class="text-muted" style="text-decoration: none;">Need an account?</a>
+        <button type="submit" class="btn btn-primary">Login</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

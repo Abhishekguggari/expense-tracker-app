@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Expense Tracker{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0" defer></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+
+  <!-- Ambient Background Glows -->
+  <div class="bg-glow bg-glow-1"></div>
+  <div class="bg-glow bg-glow-2"></div>
+
+  <!-- Skip link for accessibility -->
+  <a href="#main-content" class="sr-only">Skip to content</a>
+
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <!-- SVG Logo -->
+        <svg class="logo-icon" width="32" height="32" viewBox="0 0 32 32" fill="none" aria-label="Expense Tracker Logo">
+          <rect width="32" height="32" rx="8" fill="var(--color-primary)" />
+          <path d="M8 22 L16 10 L24 22" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <circle cx="16" cy="22" r="2" fill="white"/>
+        </svg>
+        <span class="logo-text">ExpenseTrack</span>
+      </div>
+
+      <nav class="sidebar-nav" aria-label="Main navigation">
+        {% if session.get('user_id') %}
+          <div class="user-profile" style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); margin-bottom: var(--space-2); background: var(--color-surface-offset); border-radius: var(--radius-md); border: 1px solid var(--color-border);">
+            <div style="width: 32px; height: 32px; flex-shrink: 0; background: var(--color-primary); color: white; border-radius: var(--radius-full); display: flex; align-items: center; justify-content: center; font-weight: 700; text-transform: uppercase;">
+              {{ session.get('username')[0] }}
+            </div>
+            <span style="font-weight: 600; font-size: var(--text-sm); color: var(--color-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ session.get('username') }}</span>
+          </div>
+          <a href="{{ url_for('index') }}" class="nav-item {% if request.endpoint == 'index' %}active{% endif %}">
+            <i data-lucide="layout-dashboard" class="nav-icon"></i>
+            <span>Dashboard</span>
+          </a>
+          <a href="{{ url_for('add_expense') }}" class="nav-item {% if request.endpoint == 'add_expense' %}active{% endif %}">
+            <i data-lucide="plus-circle" class="nav-icon"></i>
+            <span>Add Expense</span>
+          </a>
+        <a href="{{ url_for('profile') }}" class="nav-item {% if request.endpoint == 'profile' %}active{% endif %}">
+          <i data-lucide="settings" class="nav-icon"></i>
+          <span>Account Settings</span>
+        </a>
+          <a href="{{ url_for('logout') }}" class="nav-item">
+            <i data-lucide="log-out" class="nav-icon"></i>
+            <span>Logout</span>
+          </a>
+        {% else %}
+          <a href="{{ url_for('login') }}" class="nav-item {% if request.endpoint == 'login' %}active{% endif %}">
+            <i data-lucide="log-in" class="nav-icon"></i>
+            <span>Login</span>
+          </a>
+          <a href="{{ url_for('register') }}" class="nav-item {% if request.endpoint == 'register' %}active{% endif %}">
+            <i data-lucide="user-plus" class="nav-icon"></i>
+            <span>Register</span>
+          </a>
+        {% endif %}
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="nav-item theme-toggle-btn" data-theme-toggle aria-label="Switch to dark mode">
+          <i data-lucide="moon" class="nav-icon"></i>
+          <span>Dark Mode</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <div class="main-wrapper">
+      <!-- Top bar -->
+      <header class="topbar">
+        <button class="hamburger" id="hamburger" aria-label="Toggle sidebar">
+          <i data-lucide="menu"></i>
+        </button>
+        <h1 class="page-title">{% block page_title %}Dashboard{% endblock %}</h1>
+      </header>
+
+      <!-- Flash messages -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="flash-container">
+            {% for category, message in messages %}
+              <div class="flash flash--{{ category }}" role="alert">
+                <i data-lucide="{% if category == 'success' %}check-circle{% else %}alert-circle{% endif %}"></i>
+                <span>{{ message }}</span>
+                <button class="flash-close" onclick="this.parentElement.remove()" aria-label="Dismiss">
+                  <i data-lucide="x"></i>
+                </button>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      <main id="main-content" class="main-content">
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  <script>
+    lucide.createIcons();
+    // Re-init icons after dynamic content
+    document.addEventListener('DOMContentLoaded', () => lucide.createIcons());
+  </script>
+</body>
+</html>
